@@ -1,0 +1,45 @@
+name: Check published demo
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check public HTTPS page and installation assets
+        env:
+          DEMO_URL: https://koopin66.github.io/druzhba-calendar/
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+          from concurrent.futures import ThreadPoolExecutor
+          from urllib.parse import urljoin
+
+          base = os.environ['DEMO_URL']
+          def read(path):
+              with urllib.request.urlopen(urljoin(base, path), timeout=30) as response:
+                  assert response.status == 200, (path, response.status)
+                  data = response.read()
+                  assert data, path
+                  print('HTTP 200', path or '/')
+                  return data
+          html = read('').decode('utf-8')
+          assert 'src="./demo-runtime.js"' in html
+          assert 'src="./app.js"' in html
+          assert 'href="./manifest.webmanifest"' in html
+          manifest = json.loads(read('manifest.webmanifest'))
+          assert manifest['scope'] == './'
+          assert manifest['start_url'] == './'
+          assert manifest['display'] == 'standalone'
+          assets = ['app.js', 'demo-runtime.js', 'style.css', 'sw.js', 'manrope.ttf', 'icon.svg', 'icon-192.png', 'icon-512.png']
+          with ThreadPoolExecutor(max_workers=4) as pool:
+              results = dict(zip(assets, pool.map(read, assets)))
+          assert b'DruzhbaDemo' in results['demo-runtime.js']
+          assert b"register('./sw.js')" in results['app.js']
+          assert b'const BASE=' in results['sw.js']
+          assert results['icon-192.png'].startswith(b'\x89PNG')
+          print('Published customer demo and PWA files verified.')
+          PY
