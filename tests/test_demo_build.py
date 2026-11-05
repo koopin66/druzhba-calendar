@@ -12,6 +12,8 @@ class DemoBuildTests(unittest.TestCase):
         for path in re.findall(r'(?:src|href)="\./([^"?#]+)"',html):
             self.assertTrue((ROOT/'docs'/path).is_file(),path)
         self.assertLess(html.index('demo-runtime.js'),html.index('src="./app.js"'))
+        self.assertLess(html.index('src="./theme.js"'),html.index('href="./style.css"'))
+        self.assertIn('href="./dark.css"',html)
 
     def test_pwa_scope_and_shortcuts_use_relative_paths(self):
         manifest=json.loads((ROOT/'docs/manifest.webmanifest').read_text(encoding='utf-8'))
@@ -20,6 +22,8 @@ class DemoBuildTests(unittest.TestCase):
         self.assertEqual(manifest['shortcuts'][0]['url'],'./?new=1')
         for icon in manifest['icons']:
             self.assertTrue((ROOT/'docs'/icon['src']).is_file())
+        self.assertTrue(all('v2' in icon['src'] for icon in manifest['icons']))
+        self.assertTrue(any(icon.get('purpose')=='maskable' for icon in manifest['icons']))
 
     def test_only_safe_public_files_are_published(self):
         forbidden={'.env','server.py','calendar.sqlite3','demo.sqlite3'}

@@ -28,6 +28,8 @@ const glyphs = {
   shield: '<path d="M128 24 40 56v64c0 64 88 112 88 112s88-48 88-112V56zM88 128l24 24 56-56"/>',
   edit: '<path d="m152 48 56 56M40 216l8-64L176 24l56 56L104 208z"/>',
   help: '<circle cx="128" cy="128" r="96"/><path d="M96 96a32 32 0 1 1 48 28c-12 8-16 12-16 28m0 32h0"/>',
+  moon: '<path d="M216 144A88 88 0 0 1 112 40a88 88 0 1 0 104 104Z"/>',
+  sun: '<circle cx="128" cy="128" r="48"/><path d="M128 24v16m0 176v16M24 128h16m176 0h16M54 54l12 12m124 124 12 12M54 202l12-12M190 66l12-12"/>',
 };
 const icon = name => `<svg class="icon" viewBox="0 0 256 256" aria-hidden="true">${glyphs[name] || glyphs.calendar}</svg>`;
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -113,7 +115,7 @@ async function renderLogin(error = '') {
   let demo = false;
   try { demo = (await api('health')).demo; } catch { /* Login remains usable after reconnect. */ }
   root.innerHTML = `<main class="login-layout" id="main">
-    <section class="login-story"><div class="brand"><span class="brand-mark">д</span><div><strong>Дружба</strong><small>ресторан · Выборг</small></div></div>
+    <section class="login-story"><div class="brand"><img class="brand-mark" src="./icon-v2.svg" alt=""><div><strong>Дружба</strong><small>ресторан · Выборг</small></div></div>
       <div><div class="eyebrow">Всё на своих местах</div><h1>Больше внимания гостям.<br>Меньше забот о планах.</h1><p>Группы, банкеты и свободные места в одном календаре. Рядом с рестораном или в другом городе.</p>
       <div class="login-illustration" aria-hidden="true">${Array.from({length:21},(_,i)=>`<span class="${[4,8,9,15].includes(i)?'lit':''}">${i+1}</span>`).join('')}</div></div>
       <div class="small">Календарь ресторана при гостинице «Дружба»</div></section>
@@ -148,19 +150,36 @@ function dayEvents(day, events = visibleEvents()) {
 }
 const badge = status => `<span class="badge ${status}">${status==='confirmed'?icon('check'):''}${statusNames[status]}</span>`;
 const action = (name,label,cls='button',symbol='') => `<button class="${cls}" data-action="${name}">${symbol?icon(symbol):''}${label}</button>`;
+function themeButton() {
+  const dark=globalThis.DruzhbaTheme?.resolved==='dark';
+  const label=dark?'Включить светлую тему':'Включить тёмную тему';
+  return `<button class="icon-button theme-toggle" data-action="theme" title="${label}" aria-label="${label}" aria-pressed="${dark}">${icon(dark?'sun':'moon')}</button>`;
+}
+function appearanceCard() {
+  return `<section class="settings-card appearance-card"><h2>Оформление</h2><p>Выберите удобную тему. Автоматический режим следует настройкам вашего устройства.</p><div class="field"><label for="appearance-select">Тема приложения</label><select id="appearance-select"><option value="system">Как на устройстве</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select></div></section>`;
+}
+function updateThemeControls() {
+  const dark=globalThis.DruzhbaTheme?.resolved==='dark';
+  document.querySelectorAll('[data-action="theme"]').forEach(button=>{
+    const label=dark?'Включить светлую тему':'Включить тёмную тему';
+    button.innerHTML=icon(dark?'sun':'moon');button.title=label;button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(dark));
+  });
+  const selector=$('#appearance-select');
+  if(selector)selector.value=globalThis.DruzhbaTheme?.preference||'system';
+}
 
 function render() {
   if (!state) return;
   const requestCount = state.events.filter(e=>e.status==='request').length;
   const nav = [ ['calendar','calendar','Календарь'],['bookings','list','Все заявки'],['settings','settings','Настройки'],['help','help','Помощь'] ];
   root.innerHTML = `<div class="shell"><aside class="sidebar" aria-label="Главное меню">
-    <div class="brand"><span class="brand-mark">д</span><div><strong>Дружба</strong><small>ресторан · Выборг</small></div></div>
+    <div class="brand"><img class="brand-mark" src="./icon-v2.svg" alt=""><div><strong>Дружба</strong><small>ресторан · Выборг</small></div></div>
     <div><p class="nav-label">РАБОЧЕЕ ПРОСТРАНСТВО</p><nav class="nav">${nav.map(([key,symbol,label])=>`<button data-page="${key}" class="${page===key?'active':''}" ${page===key?'aria-current="page"':''} aria-label="${label}">${icon(symbol)}<span>${label}</span>${key==='bookings'&&requestCount?`<span class="count">${requestCount}</span>`:''}</button>`).join('')}</nav></div>
     <div class="sidebar-bottom"><div class="install-card">${icon('phone')}<div><h3>Дружба всегда рядом</h3><p>Установите календарь на телефон или компьютер.</p></div><button data-action="install">Как установить <span aria-hidden="true">↗</span></button></div>
       <div class="user"><span class="avatar">${escape(state.user.name.slice(0,1))}</span><div class="user-info"><strong>${escape(state.user.name)}</strong><span>${ACCESS_LABEL}</span></div><button class="icon-button quiet" data-action="logout" title="Выйти" aria-label="Выйти">${icon('logout')}</button></div></div></aside>
-    <div class="content"><header class="topbar"><div class="mobile-brand"><span class="brand-mark">д</span>Дружба</div><div class="breadcrumb"><span>Ресторан «Дружба»</span>${icon('chevron')}<strong>${nav.find(n=>n[0]===page)?.[2]}</strong></div><div class="top-actions">
+    <div class="content"><header class="topbar"><div class="mobile-brand"><img class="brand-mark" src="./icon-v2.svg" alt="">Дружба</div><div class="breadcrumb"><span>Ресторан «Дружба»</span>${icon('chevron')}<strong>${nav.find(n=>n[0]===page)?.[2]}</strong></div><div class="top-actions">
       <span class="sync" id="sync"><span class="dot"></span>Общий календарь</span><label class="search">${icon('search')}<input id="global-search" type="search" placeholder="Найти заявку…" aria-label="Поиск заявок" value="${escape(search)}"></label>
-      <button class="icon-button quiet" data-action="requests" title="Неподтверждённые заявки" aria-label="Неподтверждённые заявки">${icon('bell')}</button></div></header>
+      ${themeButton()}<button class="icon-button quiet" data-action="requests" title="Неподтверждённые заявки" aria-label="Неподтверждённые заявки">${icon('bell')}</button></div></header>
     <main id="main" class="main">${pageContent()}</main></div>
     <nav class="mobile-nav" aria-label="Навигация на телефоне">${nav.map(([key,symbol,label])=>`<button data-page="${key}" class="${page===key?'active':''}" ${page===key?'aria-current="page"':''}>${icon(symbol)}${key==='bookings'?'Заявки':label}</button>`).join('')}</nav></div>`;
   bindPage();
@@ -240,7 +259,7 @@ function bookingsContent() {
 }
 function settingsContent() {
   if(LOCAL_DEMO)return demoSettingsContent();
-  return `<div class="settings-grid"><section class="settings-card"><h2>Залы ресторана</h2><p>Вместимость ограничивает число гостей, которые могут находиться в зале одновременно.</p>${state.rooms.map(r=>`<div class="room-row"><strong>${escape(r.name)}</strong><span class="muted">${seatCount(r.capacity)}</span>${state.user.role==='admin'?`<button class="icon-button quiet" data-edit-room="${r.id}" aria-label="Изменить ${escape(r.name)}">${icon('edit')}</button>`:''}</div>`).join('')}${state.user.role==='admin'?action('add-room','Добавить зал','button secondary','plus'):''}</section>
+  return `<div class="settings-grid">${appearanceCard()}<section class="settings-card"><h2>Залы ресторана</h2><p>Вместимость ограничивает число гостей, которые могут находиться в зале одновременно.</p>${state.rooms.map(r=>`<div class="room-row"><strong>${escape(r.name)}</strong><span class="muted">${seatCount(r.capacity)}</span>${state.user.role==='admin'?`<button class="icon-button quiet" data-edit-room="${r.id}" aria-label="Изменить ${escape(r.name)}">${icon('edit')}</button>`:''}</div>`).join('')}${state.user.role==='admin'?action('add-room','Добавить зал','button secondary','plus'):''}</section>
     <section class="settings-card"><h2>Общий доступ команды</h2><p>Одна учётная запись для компьютера и телефонов.<br>Общий логин: ${escape(state.user.login)}</p><div class="help-list"><p>После смены общего пароля на всех устройствах потребуется войти заново. Передайте новый пароль коллегам, которые работают с календарём.</p></div>${action('password','Изменить пароль','button','shield')} ${action('logout','Выйти','button','logout')}</section>
     ${state.user.role==='admin'?`<section class="settings-card"><h2>Сохранность данных</h2><p>Заявки сохраняются на сервере. Скачивайте резервную копию перед обновлением приложения и храните её в защищённом месте.</p><a class="button" href="/api/backup" download="druzhba-backup.sqlite3">${icon('download')}Скачать резервную копию</a><p>Копия содержит контакты, хеши паролей и сессии доступа. Передавайте её только ответственному за приложение.</p></section><section class="settings-card"><h2>Последние изменения</h2><p>История общих действий в календаре. При одном логине все изменения отображаются от имени команды ресторана.</p><div id="audit-list" class="muted small">Загружаем историю…</div></section>`:''}</div>`;
 }
@@ -251,10 +270,12 @@ function helpContent() {
 }
 
 function demoSettingsContent() {
-  return `<div class="settings-grid"><section class="settings-card"><h2>Залы ресторана</h2><p>Попробуйте настройки вместимости. Изменения относятся только к вашему тестовому календарю.</p>${state.rooms.map(r=>`<div class="room-row"><strong>${escape(r.name)}</strong><span class="muted">${seatCount(r.capacity)}</span><button class="icon-button quiet" data-edit-room="${r.id}" aria-label="Изменить ${escape(r.name)}">${icon('edit')}</button></div>`).join('')}${action('add-room','Добавить зал','button secondary','plus')}</section><section class="settings-card help-list"><h2>Тест на этом устройстве</h2><p>Тестовые заявки сохраняются в этом браузере. Синхронизация с другими телефонами и компьютерами появится после подключения общего сервера.</p><p>Вход в демоверсию свободный. Используйте вымышленные имена и контакты.</p>${action('demo-backup','Скачать тестовые данные','button','download')}${action('demo-reset','Очистить календарь','button secondary')}</section><section class="settings-card"><h2>Последние изменения</h2><p>История действий в этом тестовом календаре.</p><div id="audit-list" class="muted small">Загружаем историю…</div></section><section class="settings-card"><h2>Приложение на телефоне</h2><p>Откройте ссылку в Safari на iPhone или Chrome на Android и добавьте приложение на главный экран. На ПК используйте Chrome или Edge.</p>${action('install','Как установить','button primary','phone')}</section></div>`;
+  return `<div class="settings-grid">${appearanceCard()}<section class="settings-card"><h2>Залы ресторана</h2><p>Попробуйте настройки вместимости. Изменения относятся только к вашему тестовому календарю.</p>${state.rooms.map(r=>`<div class="room-row"><strong>${escape(r.name)}</strong><span class="muted">${seatCount(r.capacity)}</span><button class="icon-button quiet" data-edit-room="${r.id}" aria-label="Изменить ${escape(r.name)}">${icon('edit')}</button></div>`).join('')}${action('add-room','Добавить зал','button secondary','plus')}</section><section class="settings-card help-list"><h2>Тест на этом устройстве</h2><p>Тестовые заявки сохраняются в этом браузере. Синхронизация с другими телефонами и компьютерами появится после подключения общего сервера.</p><p>Вход в демоверсию свободный. Используйте вымышленные имена и контакты.</p>${action('demo-backup','Скачать тестовые данные','button','download')}${action('demo-reset','Очистить календарь','button secondary')}</section><section class="settings-card"><h2>Последние изменения</h2><p>История действий в этом тестовом календаре.</p><div id="audit-list" class="muted small">Загружаем историю…</div></section><section class="settings-card"><h2>Приложение на телефоне</h2><p>Откройте ссылку в Safari на iPhone или Chrome на Android и добавьте приложение на главный экран. На ПК используйте Chrome или Edge.</p>${action('install','Как установить','button primary','phone')}</section></div>`;
 }
 
 function bindPage() {
+  updateThemeControls();
+  $('#appearance-select')?.addEventListener('change',event=>globalThis.DruzhbaTheme?.set(event.target.value));
   const bindSearch = id => $(id)?.addEventListener('input',event=>{
     const cursor=event.target.selectionStart;search=event.target.value;render();
     const input=$(id);input?.focus();input?.setSelectionRange(cursor,cursor);
@@ -436,6 +457,7 @@ document.addEventListener('click',async event=>{
     if(target.hasAttribute('data-hour')){openEvent(null,selected,Number(target.dataset.hour));return;}
     if(target.dataset.editRoom){openRoom(Number(target.dataset.editRoom));return;}
     switch(target.dataset.action){
+      case 'theme':globalThis.DruzhbaTheme?.set(globalThis.DruzhbaTheme.resolved==='dark'?'light':'dark');break;
       case 'new':openEvent();break;
       case 'close':dialog.close();break;
       case 'prev':navigatePeriod(-1);break;
@@ -461,6 +483,7 @@ document.addEventListener('keydown',event=>{
   if(target.matches('.day-cell')&&['Enter',' '].includes(event.key)){event.preventDefault();selected=target.dataset.day;month=parseDay(selected);render();focusAgenda();}
 });
 dialog.addEventListener('close',()=>{checkSequence++;clearTimeout(checkTimer);});
+window.addEventListener('druzhba-themechange',updateThemeControls);
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;});
 window.addEventListener('online',()=>{if(state)refresh(true);});
 window.addEventListener('offline',()=>{connected=LOCAL_DEMO;updateSync();});

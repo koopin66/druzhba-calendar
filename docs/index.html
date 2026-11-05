@@ -6,14 +6,15 @@
   <meta name="description" content="Тестовый календарь ресторана Дружба. Заявки хранятся только на вашем устройстве.">
   <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#214b40">
   <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Дружба">
-  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icon-192.png"><link rel="stylesheet" href="./style.css">
+  <script src="./theme.js"></script>
+  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon-v2.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-v2.png"><link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./dark.css">
   <script src="./demo-runtime.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">К содержимому</a>
-  <div id="root"><div class="loading"><span class="brand-mark">д</span><p>Открываем календарь «Дружбы»</p><div class="skeleton"></div></div></div>
+  <div id="root"><div class="loading"><img class="brand-mark" src="./icon-v2.svg" alt=""><p>Открываем календарь «Дружбы»</p><div class="skeleton"></div></div></div>
   <dialog id="dialog" aria-labelledby="dialog-title"></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <noscript>Для работы календаря включите JavaScript в настройках браузера.</noscript>

@@ -30,11 +30,14 @@ jobs:
           assert 'src="./demo-runtime.js"' in html
           assert 'src="./app.js"' in html
           assert 'href="./manifest.webmanifest"' in html
+          assert 'src="./theme.js"' in html
+          assert 'href="./dark.css"' in html
+          assert 'apple-touch-icon-v2.png' in html
           manifest = json.loads(read('manifest.webmanifest'))
           assert manifest['scope'] == './'
           assert manifest['start_url'] == './'
           assert manifest['display'] == 'standalone'
-          assets = ['app.js', 'demo-runtime.js', 'style.css', 'sw.js', 'manrope.ttf', 'icon.svg', 'icon-192.png', 'icon-512.png']
+          assets = ['app.js', 'theme.js', 'demo-runtime.js', 'style.css', 'dark.css', 'sw.js', 'manrope.ttf', 'icon-v2.svg', 'icon-192-v2.png', 'icon-512-v2.png', 'icon-maskable-v2.png', 'apple-touch-icon-v2.png']
           with ThreadPoolExecutor(max_workers=4) as pool:
               results = dict(zip(assets, pool.map(read, assets)))
           assert b'DruzhbaDemo' in results['demo-runtime.js']
@@ -43,6 +46,8 @@ jobs:
           assert b'const samples =' not in results['demo-runtime.js']
           assert b"register('./sw.js')" in results['app.js']
           assert b'const BASE=' in results['sw.js']
-          assert results['icon-192.png'].startswith(b'\x89PNG')
+          assert results['icon-192-v2.png'].startswith(b'\x89PNG')
+          assert b'DruzhbaTheme' in results['theme.js']
+          assert b'data-theme="dark"' in results['dark.css']
           print('Published customer demo and PWA files verified.')
           PY
