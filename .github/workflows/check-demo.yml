@@ -38,6 +38,9 @@ jobs:
           with ThreadPoolExecutor(max_workers=4) as pool:
               results = dict(zip(assets, pool.map(read, assets)))
           assert b'DruzhbaDemo' in results['demo-runtime.js']
+          assert b'calendarReset' in results['demo-runtime.js']
+          assert b'events:[]' in results['demo-runtime.js']
+          assert b'const samples =' not in results['demo-runtime.js']
           assert b"register('./sw.js')" in results['app.js']
           assert b'const BASE=' in results['sw.js']
           assert results['icon-192.png'].startswith(b'\x89PNG')

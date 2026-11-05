@@ -1,6 +1,7 @@
 /* Browser-only demonstration. Never uploads bookings or pretends to provide shared storage. */
 (function (global) {
   'use strict';
+  const CALENDAR_RESET = 1;
   function createDemo({storage, key = 'druzhba-demo-v1', now = () => new Date(), crypto = global.crypto}) {
     const copy = value => JSON.parse(JSON.stringify(value));
     const stamp = () => now().toISOString();
@@ -10,49 +11,25 @@
       try { storage.setItem(key, JSON.stringify(data)); }
       catch { throw new Error('Не удалось сохранить на устройстве. Проверьте свободное место и разрешение браузера на хранение данных.'); }
     }
-    function seed() {
-      const date = new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(now());
-      const prefix = date.slice(0,7);
-      const samples = [
-        [2,13,'Обед туристической группы','group',1,32],
-        [3,18,'Семейный юбилей','banquet',2,24],
-        [5,14,'Группа «Северный маршрут»','group',1,46],
-        [5,18,'День рождения','banquet',2,28],
-        [7,18,'Свадебный ужин','banquet',1,54],
-        [9,13,'Группа из Петербурга','group',1,34],
-        [11,9,'Деловой завтрак','meeting',2,22],
-        [12,13,'Обед экскурсионной группы','group',1,38],
-        [14,18,'Юбилей компании','banquet',1,48],
-        [16,13,'Группа «Балтика»','group',1,29],
-        [18,18,'Встреча выпускников','banquet',2,42],
-        [20,18,'Семейный праздник','banquet',2,26],
-        [21,14,'Группа из Москвы','group',1,35],
-        [23,18,'Ужин делегации','meeting',2,24],
-        [25,18,'День рождения','banquet',2,32],
-        [27,13,'Обед туристической группы','group',1,40],
-        [28,18,'Свадебный банкет','banquet',1,58],
-      ];
-      const events = samples.map(([day,hour,title,kind,room_id,guests], i) => ({
-        id:id(),title,kind,room_id,guests,exclusive:Number(kind==='banquet'),
-        start:`${prefix}-${String(day).padStart(2,'0')}T${String(hour).padStart(2,'0')}:00`,
-        end:`${prefix}-${String(day).padStart(2,'0')}T${String(hour+(kind==='banquet'?4:2)).padStart(2,'0')}:00`,
-        status:i%5===0?'request':'confirmed',contact:'Демонстрационный контакт',phone:'',
-        notes:'Вымышленная заявка для знакомства с приложением.',version:1,updated_by:1,updated_at:stamp(),
-      }));
-      const year=Number(date.slice(0,4))+1;
-      events.push({...events[2],id:id(),title:'Новогодняя туристическая группа',start:`${year}-01-05T14:00`,end:`${year}-01-05T16:00`,status:'confirmed'});
-      return {schema:1,rooms:[{id:1,name:'Зал 1',capacity:72,version:1},{id:2,name:'Зал 2',capacity:55,version:1}],events,audit:[]};
+    function emptyCalendar() {
+      return {schema:1,calendarReset:CALENDAR_RESET,rooms:[{id:1,name:'Зал 1',capacity:72,version:1},{id:2,name:'Зал 2',capacity:55,version:1}],events:[],audit:[]};
     }
     function load() {
       let value;
       try { value=storage.getItem(key); }
       catch { throw new Error('Браузер запретил хранение данных. Разрешите его для тестового календаря.'); }
-      if (value===null) {const data=seed();write(data);return data;}
+      if (value===null) {const data=emptyCalendar();write(data);return data;}
+      let data;
       try {
-        const data=JSON.parse(value);
+        data=JSON.parse(value);
         if(data.schema!==1||!Array.isArray(data.rooms)||!Array.isArray(data.events)||!Array.isArray(data.audit))throw new Error();
-        return data;
       } catch {throw new Error('Не удалось прочитать тестовые данные в браузере. Откройте календарь в другом профиле браузера.');}
+      // User-requested one-time cleanup of all requests already saved by older demos.
+      // Preserve halls and mark the cleanup so subsequent new bookings are never erased.
+      if(data.calendarReset!==CALENDAR_RESET) {
+        data.events=[];data.audit=[];data.calendarReset=CALENDAR_RESET;write(data);
+      }
+      return data;
     }
     function validate(input) {
       const data=copy(input);
@@ -103,7 +80,7 @@
       if(path==='users')return [copy(user)];
       if(path==='audit')return copy(data.audit);
       if(path==='backup')return copy(data);
-      if(path==='reset'&&method==='POST'){const fresh=seed();write(fresh);return {ok:true};}
+      if(path==='reset'&&method==='POST'){data.events=[];data.audit=[];write(data);return {ok:true};}
       if(path==='availability')return available(data,validate(item),item.id||'');
       if(path==='events'&&method==='POST'||/^events\/[a-f0-9]{24}$/.test(path)&&method==='PUT') {
         const valid=validate(item), eventId=method==='PUT'?path.split('/')[1]:id();

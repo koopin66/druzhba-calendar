@@ -1,6 +1,6 @@
 const BASE=new URL('./',self.location.href);
 const PREFIX='druzhba-demo:'+BASE.pathname;
-const CACHE=PREFIX+'v1';
+const CACHE=PREFIX+'v2-empty-calendar';
 const SHELL=['./','./app.js','./demo-runtime.js','./style.css','./manrope.ttf','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png'].map(p=>new URL(p,BASE).href);
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
